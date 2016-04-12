@@ -8,8 +8,6 @@ String symmetry_group;
 
 int domain_a0, domain_b0, domain_a1, domain_b1;
 int lattice_a0, lattice_b0, lattice_a1, lattice_b1;
-int[][] cell_state;
-int[][] cell_eq_class;
 
 int n_classes;
 int n_cells;
@@ -25,6 +23,8 @@ int grid_center_x, grid_center_y;
 int grid_corner_x, grid_corner_y;
 
 int gridline_shade;
+
+Cell[][] cells;
 
 void setup() {
    size(1000, 1000);
@@ -51,10 +51,12 @@ void setup() {
    domain_a1 = lattice_a0;
    domain_b0 = lattice_a0;
    domain_b1 = lattice_b1;
-   
-   cell_state = new int[grid_width][grid_width];
-    
-   cell_eq_class = new int[grid_width][grid_width];
+
+   cells = new Cell[grid_width][grid_width];
+
+   init_cells();
+       print("sandwich");
+
    compute_eq_classes();
 }
 
@@ -67,10 +69,12 @@ void mousePressed(){
   if (overGrid(mouseX, mouseY)){
     int cell_a = (mouseX - grid_corner_x)/cell_size_px;
     int cell_b = (mouseY - grid_corner_y)/cell_size_px;
-    int eq_class = cell_eq_class[cell_a][cell_b];
-    toggleClass(eq_class);
-  }
-  
+    int eq_class = cells[cell_a][cell_b].eq_class;
+    if(mouseButton == LEFT)
+      fadeClass(eq_class);
+    if(mouseButton == RIGHT)
+      pulseClass(eq_class);
+}
 }
 
 boolean overGrid(int x, int y){
@@ -85,12 +89,28 @@ boolean overGrid(int x, int y){
 }
 
 void fadeClass(int eq_class){
-  
+  Cell cell;
   for(int i = 0; i < grid_width; i++){
    for(int j = 0; j < grid_width; j++){
-     if (cell_eq_class[i][j] == eq_class){
-       toggleCell(i,j);   
+     cell = cells[i][j];
+     if (cell.eq_class == eq_class){
+       cell.toggle();
+       cell.start_fade(); 
      }
+    }
+  }
+}
+
+void pulseClass(int eq_class){
+  Cell cell;
+  for(int i = 0; i < grid_width; i++){
+   for(int j = 0; j < grid_width; j++){
+     cell = cells[i][j];
+     if (cell.eq_class == eq_class){
+       cell.toggle_pulse();
+     }
+     else
+       cell.stop_pulse();
     }
   }
 }
@@ -98,26 +118,35 @@ void fadeClass(int eq_class){
 void toggleClass(int eq_class){
   for(int i = 0; i < grid_width; i++){
    for(int j = 0; j < grid_width; j++){
-     if (cell_eq_class[i][j] == eq_class){
-       toggleCell(i,j);   
+     if (cells[i][j].eq_class == eq_class){
+       cells[i][j].toggle();
      }
     }
   }
 }
 
-void toggleCell(int a,int b){
-  cell_state[a][b] = 1 - cell_state[a][b];
-  draw_cell(a, b, cell_state[a][b]);
+void init_cells(){
+    int x;
+    int y;
+    for(int i = 0; i < grid_width; i++){
+     for(int j = 0; j < grid_width; j++){
+        x = grid_corner_x + cell_size_px * i;
+        y = grid_corner_y + cell_size_px * j;
+        cells[i][j] = new Cell();
+        cells[i][j].set_positions(i, j, x, y);
+        cells[i][j].set_size(cell_size_px);
+     }
+    }
 }
 
 void compute_eq_classes(){
     n_classes = domain_a0 * domain_b1;
-    
+    print("sandwich");
     for(int i = 0; i < grid_width; i++){
      for(int j = 0; j < grid_width; j++){
       int[] lattice_rep = mod_lattice(i,j);
       int eq_class = cell_to_int(lattice_rep[0], lattice_rep[1], domain_b1);
-      cell_eq_class[i][j] = eq_class;   
+      cells[i][j].eq_class = eq_class;   
      }
     }
 }
@@ -148,29 +177,7 @@ void compute_cell_size(){
 void drawCells(){
   for(int i = 0; i < grid_width; i++){
     for(int j = 0; j < grid_width; j++){
-      draw_cell(i, j, cell_state[i][j]);
+      cells[i][j].display();
     }
   }
-}
-
-//values of state between zero and one will be interpolated
-//cells are indexed from upper left corner
-void draw_cell(int cell_a, int cell_b, float state){
-  int cell_x = grid_corner_x + cell_size_px * cell_a;
-  int cell_y = grid_corner_y + cell_size_px * cell_b;
-  
-  if (state == 1){
-    stroke(0);
-    fill(0);
-  }
-  else if (state == 0){
-    stroke(gridline_shade);
-    fill(255);
-  }
-  else {
-    stroke(gridline_shade*(1 - state));
-    fill(255*(1-state));
-  }
-  
-  rect(cell_x, cell_y, cell_size_px, cell_size_px); 
 }
