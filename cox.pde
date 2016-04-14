@@ -29,7 +29,6 @@ int gridline_shade;
 Cell[][] cells;
 
 void setup() {
-   print(testy(4));
    SYMGROUPS = new String[]{"o", 
                "2222", "22x", "22*", "2*22","*2222",
                "442", "4*2", "*442",
@@ -41,20 +40,21 @@ void setup() {
    grid_center_x = width/2;
    grid_center_y = height/2;
    grid_width_px = min(width, height) - 20;
-
+   
+   //ensure integrality
+   grid_width = 50;
+   cell_size_px = grid_width_px/grid_width;
+   grid_width_px = grid_width * cell_size_px;
+   
    grid_corner_x = grid_center_x - grid_width_px/2;
    grid_corner_y = grid_center_y - grid_width_px/2;
-   
-   grid_width = 50;
-   
-   cell_size_px = grid_width_px/grid_width;
    
    gridline_shade = 200;
    
    
-   domain_a = 6;
+   domain_a = 4;
    domain_a1 = 0;
-   domain_b = 6;
+   domain_b = 4;
    
    lattice_a = domain_a;
    lattice_a1 = domain_a1;
@@ -63,6 +63,8 @@ void setup() {
    cells = new Cell[grid_width][grid_width];
 
    init_cells();
+
+   set_symmetry_group("x*");
 
    compute_eq_classes();
 }
@@ -87,10 +89,11 @@ void mousePressed(){
 boolean overGrid(int x, int y){
  if (x > grid_corner_x && x < grid_corner_x + grid_width_px){
    if (y > grid_corner_y && y < grid_corner_y + grid_width_px){
+     print ("hi");
      return true;
    }
  }
- 
+
  return false;
 
 }
@@ -151,7 +154,8 @@ void compute_eq_classes(){
     for(int i = 0; i < grid_width; i++){
      for(int j = 0; j < grid_width; j++){
       int[] lattice_rep = mod_lattice(i,j);
-      int eq_class = cell_to_int(lattice_rep[0], lattice_rep[1], domain_b);
+      int[] domain_rep = lattice_to_domain(lattice_rep[0], lattice_rep[1]);
+      int eq_class = cell_to_int(domain_rep[0], domain_rep[1], domain_b);
       cells[i][j].eq_class = eq_class;   
      }
     }
@@ -227,7 +231,7 @@ void set_symmetry_group(String sg){
   }
   else if(sg == "x*"){
     assert(domain_b % 2 == 0);
-    lattice_a = 2*domain_a;
+    lattice_a = 4*domain_a;
     lattice_b = domain_b;
     symmetry_group = sg;
   }
@@ -261,9 +265,12 @@ void set_symmetry_group(String sg){
   }
 }
 
-int[] lattice_to_domain(int a, int b){
-  int A = domain_a;
-  int B = domain_b;
+int[] lattice_to_domain(int ia, int ib){
+  //use coordinates of centers of squares
+  float a = ia + 0.5;
+  float b = ib + 0.5;
+  float A = domain_a;
+  float B = domain_b;
   
   if(symmetry_group == "o"){
     
@@ -277,7 +284,7 @@ int[] lattice_to_domain(int a, int b){
   else if(symmetry_group == "22x"){
     if (a > A){
       a = 2*A - a;
-      b = (b + B) % 2*B;
+      b = (b + B) % (2*B);
     }
     if (b > B){
       a = A - a;
@@ -311,36 +318,36 @@ int[] lattice_to_domain(int a, int b){
   else if(symmetry_group == "442"){
     assert(A == B);
     while(a > A || b > A){
-      int b_new = a;
-      int a_new = 2*A - b;
+      float b_new = a;
+      float a_new = 2*A - b;
       a = a_new;
       b = b_new;
     }
   }
   else if(symmetry_group == "4*2"){
     while(a > A || b > A){
-      int b_new = a;
-      int a_new = 2*A - b;
+      float b_new = a;
+      float a_new = 2*A - b;
       a = a_new;
       b = b_new;
     }
     if (a + b > A){
-      int b_new = A - a;
-      int a_new = A - b;
+      float b_new = A - a;
+      float a_new = A - b;
       a = a_new;
       b = b_new;
     }
   }
   else if(symmetry_group == "*442"){
     while(a > A || b > A){
-      int b_new = a;
-      int a_new = 2*A - b;
+      float b_new = a;
+      float a_new = 2*A - b;
       a = a_new;
       b = b_new;
     }
     if (b > a){
-      int b_new = a;
-      int a_new = b;
+      float b_new = a;
+      float a_new = b;
       a = a_new;
       b = b_new;
     }
@@ -354,7 +361,7 @@ int[] lattice_to_domain(int a, int b){
   else if(symmetry_group == "x*"){
     if (a > 2*A){
       a = 4*A - a;
-      b = (b + B/2) % b;
+      b = (b + B/2) % B;
     }
     if (a > A){
       a = 2*A - a;
@@ -383,7 +390,9 @@ int[] lattice_to_domain(int a, int b){
    print("invalid symmetry group");
   }
   
-  int[] coords = {a, b};
+  int oa = Math.round(a - 0.5);
+  int ob = Math.round(b - 0.5);
+  int[] coords = {oa, ob};
   
   return coords;
 }
