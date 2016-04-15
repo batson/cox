@@ -1,8 +1,13 @@
+import controlP5.*;
+import java.util.*;
+
 /**
  * Cox
  * 
  * App for generating tilings from symmetry group.
  */
+
+ControlP5 cp5;
 
 String symmetry_group;
 String[] SYMGROUPS;
@@ -24,49 +29,108 @@ int cell_size_px;
 int grid_center_x, grid_center_y;
 int grid_corner_x, grid_corner_y;
 
-int gridline_shade;
-
 Cell[][] cells;
 
 void setup() {
-   SYMGROUPS = new String[]{"o", 
+  SYMGROUPS = new String[]{"o", 
                "2222", "22x", "22*", "2*22","*2222",
                "442", "4*2", "*442",
                "xx", "x*", "**",
                "333", "3*3", "*333",
                "632", "*632"};
-   size(1000, 1000);
 
-   grid_center_x = width/2;
-   grid_center_y = height/2;
-   grid_width_px = min(width, height) - 20;
+  int menu_width_px = 300;
+  grid_width_px = 1000;
+  int pad_px = 20;
+  
+  grid_center_x = pad_px + grid_width_px/2;
+  grid_center_y = pad_px + grid_width_px/2;
+  size(1340, 1040);
    
-   //ensure integrality
-   grid_width = 50;
-   cell_size_px = grid_width_px/grid_width;
-   grid_width_px = grid_width * cell_size_px;
+  //ensure integrality
+  init_grid(50);   
    
-   grid_corner_x = grid_center_x - grid_width_px/2;
-   grid_corner_y = grid_center_y - grid_width_px/2;
+  domain_a = 5;
+  domain_a1 = 0;
+  domain_b = 5;
    
-   gridline_shade = 200;
-   
-   
-   domain_a = 4;
-   domain_a1 = 0;
-   domain_b = 4;
-   
-   lattice_a = domain_a;
-   lattice_a1 = domain_a1;
-   lattice_b = domain_b;
+  lattice_a = domain_a;
+  lattice_a1 = domain_a1;
+  lattice_b = domain_b;
 
-   cells = new Cell[grid_width][grid_width];
+  makeMenus(grid_width_px + 2*pad_px);
 
-   init_cells();
+  cells = new Cell[grid_width][grid_width];
 
-   set_symmetry_group("x*");
+  init_cells();
 
-   compute_eq_classes();
+  set_symmetry_group("o");
+
+  compute_eq_classes();
+}
+
+void makeMenus(int menu_left_corner){
+  int spacer = 20;
+  int y = spacer;
+ //<>//
+  Textlabel textLab;
+
+  cp5 = new ControlP5(this);
+  
+  //List of symmetry groups
+  textLab = cp5.addTextlabel("symLabel")
+     .setText("Symmetry Groups")
+     .setPosition(menu_left_corner,y)
+     .setColorValue(0)
+     .setFont(createFont("Georgia",20));
+  y += textLab.getHeight();
+  y += spacer;
+
+  List l = Arrays.asList(SYMGROUPS);
+  cp5.addScrollableList("symList")
+     .setCaptionLabel("Symmetry Group")
+     .setPosition(menu_left_corner + spacer, y)
+     .setSize(150, 260)
+     .setBarHeight(20)
+     .setItemHeight(20)
+     .setType(ControlP5.LIST)
+     .addItems(l);
+
+  y += 260;
+  
+  //grid
+  y += spacer;
+  textLab = cp5.addTextlabel("gridlabel")
+     .setText("Grid")
+     .setPosition(menu_left_corner,y)
+     .setColorValue(0)
+     .setFont(createFont("Georgia",20));
+  y += textLab.getHeight();
+  
+  y += spacer;
+  cp5.addButton("refinePressed")
+   .setCaptionLabel("Refine")
+   .setValue(0)
+   .setPosition(menu_left_corner + spacer,y)
+   .setSize(75,20);
+
+  cp5.addButton("coarsenPressed")
+   .setCaptionLabel("Coarsen")
+   .setValue(0)
+   .setPosition(menu_left_corner + 75 + spacer + spacer,y)
+   .setSize(75,20);
+  
+  //domain
+  
+  y += spacer;
+
+  textLab = cp5.addTextlabel("domainlabel")
+     .setText("Domain")
+     .setPosition(menu_left_corner,y)
+     .setColorValue(0)
+     .setFont(createFont("Georgia",20));
+  y += textLab.getHeight();
+  
 }
 
 void draw(){
@@ -75,7 +139,7 @@ void draw(){
 }
 
 void mousePressed(){
-  if (overGrid(mouseX, mouseY)){
+  if (overGrid(mouseX, mouseY)){ //<>//
     int cell_a = (mouseX - grid_corner_x)/cell_size_px;
     int cell_b = (mouseY - grid_corner_y)/cell_size_px;
     int eq_class = cells[cell_a][cell_b].eq_class;
@@ -89,13 +153,31 @@ void mousePressed(){
 boolean overGrid(int x, int y){
  if (x > grid_corner_x && x < grid_corner_x + grid_width_px){
    if (y > grid_corner_y && y < grid_corner_y + grid_width_px){
-     print ("hi");
-     return true;
+     return true; //<>//
+     
    }
  }
-
  return false;
+}
 
+public void symList(int n){
+  println("updating symmetry group to " + SYMGROUPS[n]);
+ update_symmetry_group(SYMGROUPS[n]);
+}
+
+public void gridWidth(int theValue){
+  
+  
+}
+
+public void refinePressed(int theValue) {
+  println("refine pressed");
+  refine_grid();
+}
+
+public void coarsenPressed(int theValue) {
+  println("coarsen pressed");
+  coarsen_grid();
 }
 
 void fadeClass(int eq_class){
@@ -135,6 +217,66 @@ void toggleClass(int eq_class){
   }
 }
 
+void setClass(int eq_class, int state){
+  for(int i = 0; i < grid_width; i++){
+   for(int j = 0; j < grid_width; j++){
+     if (cells[i][j].eq_class == eq_class){
+       cells[i][j].set_state(state);
+     }
+    }
+  }
+}
+
+void init_grid(int gw){
+  grid_width = gw;
+  cell_size_px = grid_width_px/grid_width;
+  grid_width_px = grid_width * cell_size_px;
+  
+  grid_corner_x = grid_center_x - grid_width_px/2;
+  grid_corner_y = grid_center_y - grid_width_px/2;
+}
+
+void refine_grid(){
+  //double number of gridcells
+  noLoop();
+  
+  domain_a *= 2;
+  domain_b *= 2;
+  domain_a1 *= 2;
+  lattice_a *= 2;
+  lattice_b *= 2;
+  lattice_a1 *= 2;
+  
+  init_grid(2*grid_width);
+  Cell[][] old_cells = cells;
+  cells = new Cell[grid_width][grid_width];
+  init_cells();
+  for(int i = 0; i < grid_width; i++){
+     for(int j = 0; j < grid_width; j++){
+        cells[i][j].set_state(old_cells[i/2][j/2].state);
+   }
+  }
+  compute_eq_classes();
+  loop();
+}
+
+void coarsen_grid(){ 
+  //halve number of grid-cells
+  set_grid(grid_width/2);
+}
+
+void set_grid(int gw){
+  //set width of the grid
+  noLoop();
+  
+
+  init_grid(gw);
+  cells = new Cell[gw][gw];
+  init_cells();
+  compute_eq_classes();
+  loop();
+}
+
 void init_cells(){
     int x;
     int y;
@@ -147,6 +289,25 @@ void init_cells(){
         cells[i][j].set_size(cell_size_px);
      }
     }
+}
+
+void update_symmetry_group(String sg){
+  if(sg == symmetry_group)
+    return;
+  set_symmetry_group(sg);
+  compute_eq_classes();
+  enforce_symmetry();
+}
+
+void enforce_symmetry(){
+  for(int i = 0; i < domain_a; i++){
+    for(int j = 0; j < domain_b; j++){
+      int state = cells[i][j].state;
+      int[] domain_rep = lattice_to_domain(i,j); //in case only a subdomain generates
+      int eq_class = cell_to_int(domain_rep[0], domain_rep[1], domain_b);
+      setClass(eq_class, state);
+    }
+  }
 }
 
 void compute_eq_classes(){

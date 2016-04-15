@@ -79,6 +79,10 @@ class Cell
   state = 1 - state; 
  }
  
+ void set_state(int st){
+  state = st; 
+ }
+ 
  void display(){
    int t = millis();
    if(fading && t - fade_start > fade_duration){
