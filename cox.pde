@@ -58,21 +58,23 @@ void setup() {
   lattice_a1 = domain_a1;
   lattice_b = domain_b;
 
+  set_symmetry_group("o");
+
+
   makeMenus(grid_width_px + 2*pad_px);
 
   cells = new Cell[grid_width][grid_width];
 
+
   init_cells();
 
-  set_symmetry_group("o");
-
-  compute_eq_classes();
+  compute_eq_classes(); //<>//
 }
 
 void makeMenus(int menu_left_corner){
-  int spacer = 20;
+  int spacer = 20; //<>//
   int y = spacer;
- //<>//
+
   Textlabel textLab;
 
   cp5 = new ControlP5(this);
@@ -238,30 +240,10 @@ void init_grid(int gw){
 
 void refine_grid(){
   //double number of gridcells
-  noLoop();
-  
-  domain_a *= 2;
-  domain_b *= 2;
-  domain_a1 *= 2;
-  lattice_a *= 2;
-  lattice_b *= 2;
-  lattice_a1 *= 2;
-  
-  init_grid(2*grid_width);
-  Cell[][] old_cells = cells;
-  cells = new Cell[grid_width][grid_width];
-  init_cells();
-  for(int i = 0; i < grid_width; i++){
-     for(int j = 0; j < grid_width; j++){
-        cells[i][j].set_state(old_cells[i/2][j/2].state);
-   }
-  }
-  compute_eq_classes();
-  loop();
+  set_grid(grid_width*2);
 }
 
 void coarsen_grid(){ 
-  //halve number of grid-cells
   set_grid(grid_width/2);
 }
 
@@ -269,11 +251,25 @@ void set_grid(int gw){
   //set width of the grid
   noLoop();
   
-
+  domain_a = domain_a * gw / grid_width;
+  domain_b = domain_b * gw / grid_width;
+  domain_a1 = domain_a1 * gw / grid_width;
+  lattice_a = lattice_a * gw / grid_width;
+  lattice_b = lattice_b * gw / grid_width;
+  lattice_a1 = lattice_a1 * gw / grid_width;
+  
+  int old_gw = grid_width;
   init_grid(gw);
-  cells = new Cell[gw][gw];
+  Cell[][] old_cells = cells;
+  cells = new Cell[grid_width][grid_width];
   init_cells();
+  for(int i = 0; i < grid_width; i++){
+     for(int j = 0; j < grid_width; j++){
+        cells[i][j].set_state(old_cells[i*old_gw/gw][j*old_gw/gw].state);
+   }
+  }
   compute_eq_classes();
+  enforce_symmetry();
   loop();
 }
 
@@ -422,7 +418,7 @@ void set_symmetry_group(String sg){
     //symmetry_group = sg;
   }
   else{
-   print("invalid symmetry group");
+   print("invalid symmetry group selected");
   }
 }
 
@@ -434,7 +430,6 @@ int[] lattice_to_domain(int ia, int ib){
   float B = domain_b;
   
   if(symmetry_group == "o"){
-    
   }
   else if(symmetry_group == "2222"){
     if (a > A){
@@ -548,7 +543,7 @@ int[] lattice_to_domain(int ia, int ib){
     print("no triangles yet");
   }
   else{
-   print("invalid symmetry group");
+   print("invalid symmetry group (lattice)");
   }
   
   int oa = Math.round(a - 0.5);
