@@ -25,9 +25,17 @@ int grid_width;
 int grid_width_px;
 int cell_size_px;
 
+int handle_size_px;
+
 //locations
 int grid_center_x, grid_center_y;
 int grid_corner_x, grid_corner_y;
+
+color domain_color = #9C79FF;
+color lattice_color = #79CAFF;
+
+boolean showDomain;
+boolean draggingDomain;
 
 Cell[][] cells;
 
@@ -65,13 +73,14 @@ void setup() {
 
   cells = new Cell[grid_width][grid_width];
 
-
   init_cells();
 
   compute_eq_classes(); //<>//
+  
+  draggingDomain = false;
 }
 
-void makeMenus(int menu_left_corner){
+void makeMenus(int menu_left){
   int spacer = 20; //<>//
   int y = spacer;
 
@@ -82,7 +91,7 @@ void makeMenus(int menu_left_corner){
   //List of symmetry groups
   textLab = cp5.addTextlabel("symLabel")
      .setText("Symmetry Groups")
-     .setPosition(menu_left_corner,y)
+     .setPosition(menu_left,y)
      .setColorValue(0)
      .setFont(createFont("Georgia",20));
   y += textLab.getHeight();
@@ -91,7 +100,7 @@ void makeMenus(int menu_left_corner){
   List l = Arrays.asList(SYMGROUPS);
   cp5.addScrollableList("symList")
      .setCaptionLabel("Symmetry Group")
-     .setPosition(menu_left_corner + spacer, y)
+     .setPosition(menu_left + spacer, y)
      .setSize(150, 260)
      .setBarHeight(20)
      .setItemHeight(20)
@@ -104,7 +113,7 @@ void makeMenus(int menu_left_corner){
   y += spacer;
   textLab = cp5.addTextlabel("gridlabel")
      .setText("Grid")
-     .setPosition(menu_left_corner,y)
+     .setPosition(menu_left,y)
      .setColorValue(0)
      .setFont(createFont("Georgia",20));
   y += textLab.getHeight();
@@ -113,13 +122,13 @@ void makeMenus(int menu_left_corner){
   cp5.addButton("refinePressed")
    .setCaptionLabel("Refine")
    .setValue(0)
-   .setPosition(menu_left_corner + spacer,y)
+   .setPosition(menu_left + spacer,y)
    .setSize(75,20);
 
   cp5.addButton("coarsenPressed")
    .setCaptionLabel("Coarsen")
    .setValue(0)
-   .setPosition(menu_left_corner + 75 + spacer + spacer,y)
+   .setPosition(menu_left + 75 + spacer + spacer,y)
    .setSize(75,20);
   
   //domain
@@ -128,20 +137,52 @@ void makeMenus(int menu_left_corner){
 
   textLab = cp5.addTextlabel("domainlabel")
      .setText("Domain")
-     .setPosition(menu_left_corner,y)
+     .setPosition(menu_left,y)
      .setColorValue(0)
      .setFont(createFont("Georgia",20));
   y += textLab.getHeight();
   
+  y += spacer;
+  
+  cp5.addToggle("showDomain")
+     .setPosition(menu_left + spacer,y)
+     .setSize(60,20);
 }
 
 void draw(){
   background(255);
   drawCells();
+  if(showDomain){
+   drawDomain(); 
+  }
+}
+
+void drawDomain(){
+  if(showDomain){
+     pushMatrix();
+     
+     translate(grid_corner_x, grid_corner_y);
+     noFill();
+
+     strokeWeight(2);
+     stroke(lattice_color);
+     rect(0,0,cell_size_px * lattice_a,cell_size_px * lattice_b);
+     stroke(domain_color);
+     rect(0,0,cell_size_px * domain_a,cell_size_px * domain_b);
+     fill(domain_color);
+     handle_size_px = cell_size_px/2;
+     ellipse(cell_size_px * domain_a,cell_size_px * domain_b, handle_size_px, handle_size_px);
+     popMatrix();
+     
+     strokeWeight(1);
+  }
 }
 
 void mousePressed(){
-  if (overGrid(mouseX, mouseY)){ //<>//
+  if(showDomain && overDomainHandle(mouseX, mouseY)){
+    println("clickin on that domain");
+  }
+  else if (overGrid(mouseX, mouseY)){ //<>//
     int cell_a = (mouseX - grid_corner_x)/cell_size_px;
     int cell_b = (mouseY - grid_corner_y)/cell_size_px;
     int eq_class = cells[cell_a][cell_b].eq_class;
@@ -149,7 +190,16 @@ void mousePressed(){
       fadeClass(eq_class);
     if(mouseButton == RIGHT)
       pulseClass(eq_class);
+  }
 }
+
+boolean overDomainHandle(int x, int y){
+  x = x - grid_corner_x - cell_size_px*domain_a;
+  y = y - grid_corner_y - cell_size_px*domain_b;
+  if(x*x + y*y < handle_size_px*handle_size_px)
+    return true;
+  else
+    return false; 
 }
 
 boolean overGrid(int x, int y){
@@ -581,4 +631,29 @@ void drawCells(){
       cells[i][j].display();
     }
   }
+}
+
+class DomainSelector {
+  int gwidth; //width of domain in grid cells
+  int gheight; //height of domain in grid cells
+  int cell_width_px;
+  
+  boolean over;      //is the mouse over the handle?
+  boolean locked;
+  
+  float handle_width_px; //width of handle ball in pixels
+  
+
+  int xcorner;
+  int ycorner;
+  
+  void update() {
+    
+  }
+  
+  boolean overHandle() {
+    
+    return true;
+  }
+  
 }
