@@ -35,7 +35,8 @@ color domain_color = #9C79FF;
 color lattice_color = #79CAFF;
 
 boolean showDomain;
-boolean draggingDomain;
+
+DomainSelector ds;
 
 Cell[][] cells;
 
@@ -66,6 +67,8 @@ void setup() {
   lattice_a1 = domain_a1;
   lattice_b = domain_b;
 
+  ds = new DomainSelector(domain_a, domain_b, cell_size_px, grid_corner_x, grid_corner_y, 2, 2);
+
   set_symmetry_group("o");
 
 
@@ -75,13 +78,11 @@ void setup() {
 
   init_cells();
 
-  compute_eq_classes(); //<>//
-  
-  draggingDomain = false;
+  compute_eq_classes();
 }
 
 void makeMenus(int menu_left){
-  int spacer = 20; //<>//
+  int spacer = 20;
   int y = spacer;
 
   Textlabel textLab;
@@ -146,7 +147,9 @@ void makeMenus(int menu_left){
   
   cp5.addToggle("showDomain")
      .setPosition(menu_left + spacer,y)
-     .setSize(60,20);
+     .setSize(60,20)
+     .setCaptionLabel("Domain")
+     .setLabelVisible(true);
 }
 
 void draw(){
@@ -158,31 +161,24 @@ void draw(){
 }
 
 void drawDomain(){
-  if(showDomain){
-     pushMatrix();
-     
-     translate(grid_corner_x, grid_corner_y);
-     noFill();
-
-     strokeWeight(2);
-     stroke(lattice_color);
-     rect(0,0,cell_size_px * lattice_a,cell_size_px * lattice_b);
-     stroke(domain_color);
-     rect(0,0,cell_size_px * domain_a,cell_size_px * domain_b);
-     fill(domain_color);
-     handle_size_px = cell_size_px/2;
-     ellipse(cell_size_px * domain_a,cell_size_px * domain_b, handle_size_px, handle_size_px);
-     popMatrix();
-     
-     strokeWeight(1);
+  ds.update();
+  ds.display();
+  if(!ds.dragging){
+    if(!(domain_a == ds.dwidth && domain_b == ds.dheight)){
+      domain_a = ds.dwidth;
+      domain_b = ds.dheight;
+      set_symmetry_group(symmetry_group);
+      compute_eq_classes();
+      enforce_symmetry();
+    }
   }
 }
 
 void mousePressed(){
-  if(showDomain && overDomainHandle(mouseX, mouseY)){
+  if(showDomain && ds.overHandle()){
     println("clickin on that domain");
   }
-  else if (overGrid(mouseX, mouseY)){ //<>//
+  else if (overGrid(mouseX, mouseY)){
     int cell_a = (mouseX - grid_corner_x)/cell_size_px;
     int cell_b = (mouseY - grid_corner_y)/cell_size_px;
     int eq_class = cells[cell_a][cell_b].eq_class;
@@ -205,7 +201,7 @@ boolean overDomainHandle(int x, int y){
 boolean overGrid(int x, int y){
  if (x > grid_corner_x && x < grid_corner_x + grid_width_px){
    if (y > grid_corner_y && y < grid_corner_y + grid_width_px){
-     return true; //<>//
+     return true;
      
    }
  }
@@ -215,11 +211,6 @@ boolean overGrid(int x, int y){
 public void symList(int n){
   println("updating symmetry group to " + SYMGROUPS[n]);
  update_symmetry_group(SYMGROUPS[n]);
-}
-
-public void gridWidth(int theValue){
-  
-  
 }
 
 public void refinePressed(int theValue) {
@@ -320,7 +311,19 @@ void set_grid(int gw){
   }
   compute_eq_classes();
   enforce_symmetry();
+  update_domain_selector();
   loop();
+}
+
+void update_domain_selector(){
+  ds.set_domain(domain_a, domain_b);
+  ds.set_ratio(lattice_a/domain_a, lattice_b/domain_b); 
+  ds.cell_size_px = cell_size_px;
+  if(symmetry_group.contains("4")){
+    ds.square = true;
+  }
+  else
+    ds.square = false;
 }
 
 void init_cells(){
@@ -343,6 +346,7 @@ void update_symmetry_group(String sg){
   set_symmetry_group(sg);
   compute_eq_classes();
   enforce_symmetry();
+  update_domain_selector();
 }
 
 void enforce_symmetry(){
@@ -634,26 +638,126 @@ void drawCells(){
 }
 
 class DomainSelector {
-  int gwidth; //width of domain in grid cells
-  int gheight; //height of domain in grid cells
-  int cell_width_px;
-  
-  boolean over;      //is the mouse over the handle?
-  boolean locked;
-  
-  float handle_width_px; //width of handle ball in pixels
-  
+  int dwidth; //width of domain in grid cells
+  int dheight; //height of domain in grid cells
 
-  int xcorner;
-  int ycorner;
+  int cell_size_px;
+  int handle_size_px;
+  
+  int dcorner_x;
+  int dcorner_y;
+  
+  float handle_x;
+  float handle_y;
+  
+  int width_ratio;
+  int height_ratio;
+  
+  boolean dragging;
+  
+  color domain_color;
+  color light_domain_color;
+  color lattice_color;
+ 
+  boolean square;
+ 
+  DomainSelector(int domain_a, int domain_b, int icell_size_px, int dcx, int dcy, int wr, int hr) {
+    
+    dwidth = domain_a;
+    dheight = domain_b;
+    
+    cell_size_px = icell_size_px;
+    handle_size_px = cell_size_px/4;
+    
+    dcorner_x = dcx;
+    dcorner_y = dcy;
+    
+    handle_x = dcorner_x + cell_size_px * dwidth;
+    handle_y = dcorner_y + cell_size_px * dheight;
+    
+    width_ratio = wr;
+    height_ratio = hr;
+    
+    dragging = false;
+    
+    domain_color = #9C79FF;
+    light_domain_color = #CBB9FF;
+    lattice_color = #79CAFF;
+    
+    square = false;
+  }
   
   void update() {
-    
+    if(dragging) {
+      handle_x = mouseX;
+      handle_y = mouseY;
+      if(square)
+        handle_y = handle_x;
+      
+      if(!mousePressed){
+        dragging = false;
+        snap_handle();
+      }
+    }
+    if(!dragging){
+      if(square)
+        handle_y = handle_x;
+      if(overHandle() && mousePressed){
+        dragging = true; 
+      }
+    }
+          
+  }
+  
+  void snap_handle() {
+   dwidth = round((handle_x - dcorner_x)/cell_size_px);
+   dheight = round((handle_y - dcorner_y)/cell_size_px);
+   
+   dheight = max(dheight, 1);
+   dwidth = max(dwidth, 1);
+   
+   handle_x = dcorner_x + cell_size_px * dwidth;
+   handle_y = dcorner_y + cell_size_px * dheight;
+
   }
   
   boolean overHandle() {
-    
-    return true;
+    float x = mouseX - handle_x;
+    float y = mouseY - handle_y;
+    if(x*x + y*y < handle_size_px*handle_size_px)
+      return true;
+    else
+      return false; 
+  }
+  
+  void set_ratio(int wr, int hr){
+    width_ratio = wr;
+    height_ratio = hr;
+  }
+  
+  void set_domain(int da, int db){
+    dwidth = da;
+    dheight = db;
+  }
+  
+  void display() {
+     pushMatrix();
+     
+     noFill();
+
+     strokeWeight(2);
+     stroke(lattice_color);
+     rect(dcorner_x, dcorner_y, (handle_x - dcorner_x) * width_ratio, (handle_y - dcorner_y) * height_ratio);
+     stroke(domain_color);
+     rect(dcorner_x, dcorner_y, handle_x - dcorner_x, handle_y - dcorner_y);
+     if(overHandle())
+       fill(light_domain_color);
+     else
+       fill(domain_color);
+     ellipse(handle_x, handle_y, 2*handle_size_px, 2*handle_size_px);
+     popMatrix();
+     
+     strokeWeight(1);
   }
   
 }
