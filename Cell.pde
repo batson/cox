@@ -30,7 +30,7 @@ class Cell
    empty_stroke = 200;
    empty_fill = 255;
    
-   fade_duration = 500.0;
+   fade_duration = 100.0;
    pulse_period = 2000.0;
    eq_class = 0;
 

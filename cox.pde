@@ -40,6 +40,9 @@ DomainSelector ds;
 
 Cell[][] cells;
 
+boolean filling;
+int filling_state;
+
 void setup() {
   SYMGROUPS = new String[]{"o", 
                "2222", "22x", "22*", "2*22","*2222",
@@ -66,6 +69,9 @@ void setup() {
   lattice_a = domain_a;
   lattice_a1 = domain_a1;
   lattice_b = domain_b;
+
+  filling = false;
+  filling_state = 0;
 
   ds = new DomainSelector(domain_a, domain_b, cell_size_px, grid_corner_x, grid_corner_y, 2, 2);
 
@@ -154,9 +160,34 @@ void makeMenus(int menu_left){
 
 void draw(){
   background(255);
+  updateCells();
   drawCells();
   if(showDomain){
    drawDomain(); 
+  }
+}
+
+void updateCells(){
+  if(!showDomain || !(ds.overHandle())){
+     if(filling) {
+       if(overGrid(mouseX, mouseY)){
+         int cell_a = (mouseX - grid_corner_x)/cell_size_px;
+         int cell_b = (mouseY - grid_corner_y)/cell_size_px;
+         int eq_class = cells[cell_a][cell_b].eq_class;
+         fadeClass(eq_class, filling_state);
+       }
+       if(!mousePressed){
+         filling = false;
+       }
+    }
+    if(!filling){
+      if(overGrid(mouseX, mouseY) & mousePressed){
+        filling = true;
+        int cell_a = (mouseX - grid_corner_x)/cell_size_px;
+        int cell_b = (mouseY - grid_corner_y)/cell_size_px;
+        filling_state = 1 - cells[cell_a][cell_b].state;
+      }
+    }
   }
 }
 
@@ -171,21 +202,6 @@ void drawDomain(){
       compute_eq_classes();
       enforce_symmetry();
     }
-  }
-}
-
-void mousePressed(){
-  if(showDomain && ds.overHandle()){
-    println("clickin on that domain");
-  }
-  else if (overGrid(mouseX, mouseY)){
-    int cell_a = (mouseX - grid_corner_x)/cell_size_px;
-    int cell_b = (mouseY - grid_corner_y)/cell_size_px;
-    int eq_class = cells[cell_a][cell_b].eq_class;
-    if(mouseButton == LEFT)
-      fadeClass(eq_class);
-    if(mouseButton == RIGHT)
-      pulseClass(eq_class);
   }
 }
 
@@ -231,6 +247,21 @@ void fadeClass(int eq_class){
      if (cell.eq_class == eq_class){
        cell.toggle();
        cell.start_fade(); 
+     }
+    }
+  }
+}
+
+void fadeClass(int eq_class, int state){
+  Cell cell;
+  for(int i = 0; i < grid_width; i++){
+   for(int j = 0; j < grid_width; j++){
+     cell = cells[i][j];
+     if (cell.eq_class == eq_class){
+       if(cell.state != state){
+           cell.toggle();
+           cell.start_fade(); 
+       }
      }
     }
   }
