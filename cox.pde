@@ -52,7 +52,7 @@ void setup() {
                "632", "*632"};
 
   int menu_width_px = 300;
-  grid_width_px = 1000;
+  grid_width_px = 16*50;
   int pad_px = 20;
   
   grid_center_x = pad_px + grid_width_px/2;
@@ -168,24 +168,26 @@ void draw(){
 }
 
 void updateCells(){
-  if(!showDomain || !(ds.overHandle())){
-     if(filling) {
-       if(overGrid(mouseX, mouseY)){
-         int cell_a = (mouseX - grid_corner_x)/cell_size_px;
-         int cell_b = (mouseY - grid_corner_y)/cell_size_px;
-         int eq_class = cells[cell_a][cell_b].eq_class;
-         fadeClass(eq_class, filling_state);
-       }
-       if(!mousePressed){
-         filling = false;
-       }
-    }
-    if(!filling){
-      if(overGrid(mouseX, mouseY) & mousePressed){
-        filling = true;
-        int cell_a = (mouseX - grid_corner_x)/cell_size_px;
-        int cell_b = (mouseY - grid_corner_y)/cell_size_px;
-        filling_state = 1 - cells[cell_a][cell_b].state;
+  if(!ds.dragging){
+    if(!showDomain || !(ds.overHandle())){
+       if(filling) {
+         if(overGrid(mouseX, mouseY)){
+           int cell_a = (mouseX - grid_corner_x)/cell_size_px;
+           int cell_b = (mouseY - grid_corner_y)/cell_size_px;
+           int eq_class = cells[cell_a][cell_b].eq_class;
+           fadeClass(eq_class, filling_state);
+         }
+         if(!mousePressed){
+           filling = false;
+         }
+      }
+      if(!filling){
+        if(overGrid(mouseX, mouseY) & mousePressed){
+          filling = true;
+          int cell_a = (mouseX - grid_corner_x)/cell_size_px;
+          int cell_b = (mouseY - grid_corner_y)/cell_size_px;
+          filling_state = 1 - cells[cell_a][cell_b].state;
+        }
       }
     }
   }
@@ -231,7 +233,10 @@ public void symList(int n){
 
 public void refinePressed(int theValue) {
   println("refine pressed");
-  refine_grid();
+  if(cell_size_px/2 < 3)
+    println("cells are too small to be refined");
+  else
+    refine_grid();
 }
 
 public void coarsenPressed(int theValue) {
